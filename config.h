@@ -25,26 +25,48 @@
 #define NTP_SERVER      "pool.ntp.org"
 #define NTP_OFFSET_SEC  25200   // UTC+7 = 7 * 3600 = 25200
 
-// ── Alert Thresholds — Server Room Fire Monitor ────────────
-// อุณหภูมิ: ห้อง Server ปกติ 18-27°C
-#define TEMP_CAUTION      35.0  // °C → Warning (ร้อนผิดปกติ)
-#define TEMP_ALERT        45.0  // °C → FIRE! (วิกฤต)
-#define TEMP_COMBINED     40.0  // °C ใช้คู่กับ LIGHT_WARNING = ยืนยัน FIRE!
-// ความชื้น: ต่ำ = อากาศแห้ง = ติดไฟง่าย
-#define HUM_CAUTION       30.0  // % ต่ำกว่านี้ = Warning (แห้ง)
-#define HUM_ALERT         20.0  // % ต่ำกว่านี้ = Warning ระดับสูง
-// แสง/เปลวไฟ: ห้อง Server ปกติมืด
-#define LIGHT_WARNING     60    // % → Warning (แสงผิดปกติ)
-#define LIGHT_FIRE        80    // % → FIRE! (เปลวไฟ)
+// ╔══════════════════════════════════════════════════════════════╗
+// ║         SIGNATURE DEMO CONDITIONS — แสดงอาจารย์            ║
+// ╠══════════════════════════════════════════════════════════════╣
+// ║                                                              ║
+// ║  🟢 SAFE    : ปล่อยทิ้งไว้ ไม่แตะ sensor                   ║
+// ║               temp < 32°C, humidity ~55-60%, flame < 50%    ║
+// ║               → LED เขียว, Buzzer เงียบ                     ║
+// ║                                                              ║
+// ║  🟡 WARNING : ครอบมือบน DHT11 ค้างไว้ ~20 วินาที           ║
+// ║               temp ≥ 32°C + humidity 55% (ต่ำกว่า 63%=DRY) ║
+// ║               → LED เหลือง, Buzzer 2 beep, LCD: WARNING     ║
+// ║               trigger_reason: TempHigh+DryAir               ║
+// ║                                                              ║
+// ║  🔴 FIRE!   : ครอบมือ + ส่องไฟฉายที่ LDR พร้อมกัน         ║
+// ║               temp ≥ 32°C + DRY + flame ≥ 72%  (3 sensor)  ║
+// ║               → LED แดง, Buzzer alarm, Firebase log         ║
+// ║               trigger_reason: AllThree (Cascading Logic)    ║
+// ║                                                              ║
+// ║  ลำดับสาธิต (3 นาที):                                       ║
+// ║  1. เปิดระบบ         → Safe                                 ║
+// ║  2. ครอบมือ ~20 วิ   → Warning                              ║
+// ║  3. เพิ่มไฟฉาย       → FIRE! (ครบ 3 เงื่อนไข)              ║
+// ║  4. ปล่อยทุกอย่าง    → กลับ Safe ใน 4 วิ                   ║
+// ╚══════════════════════════════════════════════════════════════╝
 
-// ── Fire Confirmation — ป้องกัน False Alarm ──────────────
-// ต้องอ่านค่าเกิน threshold ติดต่อกัน N ครั้งถึงจะเปลี่ยนสถานะ
-#define ESCALATE_CONFIRM    2   // ×2s = 4s ก่อนยกระดับ (ตอบสนองเร็ว)
-#define DEESCALATE_CONFIRM  5   // ×2s = 10s ก่อนลดระดับ (อย่าด่วนสรุปว่าปลอดภัย)
+// ── Alert Thresholds — DEMO MODE ──────────────────────────────
+#define TEMP_CAUTION      32.0  // °C → Warning  | ครอบมือ ~15-20 วิ
+#define TEMP_ALERT        36.0  // °C → FIRE!    | ครอบมือแน่นๆ ~45 วิ
+#define TEMP_COMBINED     33.0  // °C → ใช้คู่ flame ≥ 72% = ยืนยัน FIRE!
+// ความชื้น: ห้องนี้ปกติ 55-60% ต่ำกว่า 63% = DRY เสมอ (EnvRisk: Yes)
+#define HUM_CAUTION       63.0  // % → DRY | ห้องปกติ 55-60% trigger ได้เลย
+#define HUM_ALERT         20.0  // % (สำรอง)
+// แสง: ส่องไฟฉายที่ LDR
+#define LIGHT_WARNING     50    // % → Warning | ส่องไฟฉายห่างๆ
+#define LIGHT_FIRE        72    // % → FIRE!   | ส่องไฟฉายชิด
 
-// ── Temperature Rate of Change — ตรวจจับไฟลามเร็ว ─────────
-// อุณหภูมิเปลี่ยนเร็ว = สัญญาณไฟลาม แม้ยังไม่ถึง threshold สูงสุด
-#define TEMP_RISE_RATE_WARN 0.5 // °C ต่อ 2 วิ (15°C/นาที) → Warning
-#define TEMP_RISE_RATE_FIRE 1.5 // °C ต่อ 2 วิ (45°C/นาที) → FIRE!
+// ── Fire Confirmation ─────────────────────────────────────────
+#define ESCALATE_CONFIRM    2   // ×2s = 4s ก่อนยกระดับ
+#define DEESCALATE_CONFIRM  2   // ×2s = 4s ก่อนลดระดับ (เร็วสำหรับ demo)
+
+// ── Temperature Rate of Change ────────────────────────────────
+#define TEMP_RISE_RATE_WARN 0.3 // °C/2s → Warning | กด EN reset trigger ได้เลย
+#define TEMP_RISE_RATE_FIRE 1.2 // °C/2s → FIRE!   | boot ~1.66°C/2s trigger ✓
 
 #endif // CONFIG_H
